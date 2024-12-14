@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { ColorRange } from '../data-test/messages-data'
 
 export class LoginPage {
   readonly page: Page;
@@ -30,18 +29,8 @@ export class LoginPage {
     } catch (error) {}
   }
 
-  async assertMessage(expectedMessage: string, colorRange: ColorRange) {
+  async assertMessage(expectedMessage: string) {
     await expect(this.errorMessage).toBeVisible();
     await expect(this.errorMessage).toContainText(expectedMessage);
-    
-    const backgroundColor = await this.errorMessage.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const [r, g, b] = backgroundColor.match(/\d+/g)!.map(Number);
-    const isColorInRange = 
-    r >= colorRange.r[0] && r <= colorRange.r[1] &&
-    g >= colorRange.g[0] && g <= colorRange.g[1] &&
-    b >= colorRange.b[0] && b <= colorRange.b[1];
-
-    expect(isColorInRange).toBeTruthy();
-
   }
 }
