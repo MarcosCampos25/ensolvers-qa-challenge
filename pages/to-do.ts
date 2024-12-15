@@ -11,6 +11,9 @@ export class ToDoPage {
   readonly folderSelectable: Locator;
   readonly saveNewEntity: Locator;
   readonly alertMessage: Locator;
+  readonly deleteRow: Locator;
+  readonly confirmDelete: Locator;
+  readonly editRow: Locator;
 
 
   constructor(page: Page) {
@@ -23,6 +26,9 @@ export class ToDoPage {
     this.folderSelectable = page.locator('[data-cy="folder"]');
     this.saveNewEntity = page.locator('[data-cy="entityCreateSaveButton"]');
     this.alertMessage = page.locator('[role="alert"]');
+    this.deleteRow = page.locator('[data-cy="entityDeleteButton"]');
+    this.confirmDelete = page.locator('[data-cy="entityConfirmDeleteButton"]');
+    this.editRow = page.locator('[data-cy="entityEditButton"]');
   }
 
   async goto() {
@@ -55,9 +61,89 @@ export class ToDoPage {
     const folder = await row.locator('td:nth-child(4)').innerText();
     return { id, title, description, folder };
   }
+
+  async deleteTaskByName(taskName: string) {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            attempt++;
+            await this.tryDeleteRow(taskName);
+            return; 
+        } catch (error) {
+            if (attempt >= maxRetries) {
+                throw new Error(`Failed to delete the task after ${maxRetries} attempts.`);
+            }
+        }
+    }
+  }
+
+  private async tryDeleteRow(taskName: string) {
+      await expect(this.refreshList).toBeEnabled();
+      await this.refreshList.click();
+      const row = this.page.locator(`table tr:has(td:text("${taskName}"))`).first();
+      await row.locator(this.deleteRow).click();
+      await this.confirmDelete.click();
+      await expect(this.page.locator(`table tr:has(td:text("${taskName}"))`)).toHaveCount(0, {timeout: 3000});
+  }
+
   
-  async errorExcpected(errorExpected: boolean, expectedMessage: string = '', notExpectedMessage: string = '') {
-    if (errorExpected) {
+  async validateRemove(taskName: string) {
+    const row = this.page.locator(`table tr:has(td:text("${taskName}"))`)
+    await expect(row).toHaveCount(0);
+  }
+
+  async editTaskByName(taskName: string, newTaskName: string = '-', newDescription: string = '-', newFolder: string = '-') {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            attempt++;
+            await this.tryEditRow(taskName, newTaskName, newDescription, newFolder);
+            return;
+        } catch (error) {
+            if (attempt >= maxRetries) {
+                throw new Error(`Failed to edit the task after ${maxRetries} attempts.`);
+            }
+        }
+    }
+  }
+
+  private async tryEditRow(taskName: string, newTaskName: string, newDescription: string, newFolder: string) {
+      await expect(this.refreshList).toBeEnabled();
+      await this.refreshList.click();
+      await expect(this.refreshList).toBeEnabled();
+
+      const row = this.page.locator(`table tr:has(td:text("${taskName}"))`).first();
+      await row.locator(this.editRow).click();
+      await expect(this.titleNewEntity).toBeVisible();
+
+      await this.updateField(this.titleNewEntity, newTaskName);
+      await this.updateField(this.descriptionNewEntity, newDescription);
+      await this.updateDropdown(this.folderSelectable, newFolder);
+
+      await this.saveNewEntity.click();
+  }
+
+  private async updateField(field: Locator, newValue: string) {
+      if (newValue !== '-') {
+          await field.clear();
+          await field.fill(newValue);
+          await expect(field).toHaveValue(newValue);
+      }
+  }
+
+  private async updateDropdown(dropdown: Locator, visibleText: string) {
+      if (visibleText !== '-') {
+          await dropdown.selectOption({ label: visibleText });
+          await expect(dropdown).toHaveValue(visibleText);
+      }
+  }
+
+  async errorExcpected(errorIsExpected: boolean, expectedMessage: string = '', notExpectedMessage: string = '') {
+    if (errorIsExpected) {
         await expect(this.alertMessage).not.toContainText(notExpectedMessage);
         const actualErrorMessage = await this.alertMessage.textContent();
         expect(genericsErrorMessagge).not.toContain(actualErrorMessage);

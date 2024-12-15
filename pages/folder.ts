@@ -40,7 +40,10 @@ export class FolderPage {
     }
 
     async create(name: string) {
+        console.log(name)
         await this.entityCreateButton.click();
+        await this.nameNewEntity.click();
+        await this.page.waitForLoadState('networkidle');
         await this.nameNewEntity.fill(name);
         await this.saveNewEntity.click();
     }
@@ -55,11 +58,29 @@ export class FolderPage {
     }
 
     async deleteFolderByName(folderName: string) {
+        const maxRetries = 3;
+        let attempt = 0;    
+        while (attempt < maxRetries) {
+            try {
+                attempt++;
+                await this.tryDeleteRow(folderName);
+                return;
+            } catch (error) {    
+                if (attempt >= maxRetries) {
+                    throw new Error(`Could not remove the folder after ${maxRetries} retries`);
+                }
+            }
+        }
+    }
+    
+    private async tryDeleteRow(folderName: string) {
         await expect(this.refreshList).toBeEnabled();
         await this.refreshList.click();
+    
         const row = this.page.locator(`table tr:has(td:text("${folderName}"))`).first();
         await row.locator(this.deleteRow).click();
         await this.confirmDelete.click();
+        await expect(this.page.locator(`table tr:has(td:text("${folderName}"))`)).toHaveCount(0, {timeout: 3000});
     }
  
     async validateRemove(folderName: string) {
@@ -73,26 +94,46 @@ export class FolderPage {
     }
     
     async validateView(folderDetails: { id: string; name: string }) {
+        await this.detailsId.waitFor({ state: 'visible' });
+        await this.detailsName.waitFor({ state: 'visible' });
+    
         const id = await this.detailsId.innerText();
         const name = await this.detailsName.innerText();
+    
         expect(id).toContain(folderDetails.id);
-        expect(name).toContain(folderDetails.name);       
+        expect(name).toContain(folderDetails.name); 
     }
 
     async editFolderByName(folderName: string, newFolderName: string) {
+        const maxRetries = 3;
+        let attempt = 0;
+    
+        while (attempt < maxRetries) {
+            try {
+                attempt++;
+                await this.tryEditRow(folderName, newFolderName);
+                return;
+            } catch (error) {    
+                if (attempt >= maxRetries) {
+                    throw new Error(`Could not edit the folder after ${maxRetries} retries`);
+                }
+            }
+        }
+    }
+
+    private async tryEditRow(folderName: string, newFolderName: string) {
         await expect(this.refreshList).toBeEnabled();
         await this.refreshList.click();
         await expect(this.refreshList).toBeEnabled();
         const row = this.page.locator(`table tr:has(td:text("${folderName}"))`).first();
         await row.locator(this.editRow).click();
 
+        await this.page.waitForLoadState('networkidle');
         await expect(this.nameNewEntity).toBeVisible();
         await this.nameNewEntity.clear();
-        await Promise.all([this.page.waitForLoadState('networkidle')]); 
     
         await this.nameNewEntity.fill(newFolderName);
         await expect(this.nameNewEntity).toHaveValue(newFolderName);
-        await Promise.all([this.page.waitForLoadState('networkidle')]); 
         await this.saveNewEntity.click();
     }
 

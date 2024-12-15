@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { FolderPage } from '../pages/folder';
 import { LoginPage } from '../pages/login';
-import { validLoginData, invalidLoginData } from '../data-test/login-data';
-import { folderName, folder256Name } from '../data-test/folder-data';
+import { validLoginData } from '../data-test/login-data';
+import { folder256Name } from '../data-test/folder-data';
 import { succesMessageToValidFolder, succesMessageToEditFolder, succcesMessageToDeleteFolder } from '../data-test/messages-data'
 // @ts-check
 
@@ -14,6 +14,7 @@ test.beforeEach(async ({ page }) => {
 
 // Crate new folder cases
 test('Positive - create new folder', async ({ page }) => {
+    const folderName = `folder-${Math.random().toString(36).substring(2, 16)}`;
     const folder = new FolderPage(page);
     await folder.goto();
     await folder.create(folderName);
@@ -38,6 +39,7 @@ test('Negative - validate name with more than 256 characters and that the error 
 });
 // View folder case
 test('Positive - view folder', async ({ page }) => {
+    const folderName = `folder-${Math.random().toString(36).substring(2, 16)}`;
     const folder = new FolderPage(page);
     await folder.goto();
     await folder.create(folderName);
@@ -50,6 +52,7 @@ test('Positive - view folder', async ({ page }) => {
 
 // Delete folder case
 test('Positive - delete a folder ', async ({ page }) => {
+    const folderName = `folder-${Math.random().toString(36).substring(2, 16)}`;
     const folder = new FolderPage(page);
     await folder.goto();
     await folder.create(folderName);
@@ -62,6 +65,7 @@ test('Positive - delete a folder ', async ({ page }) => {
 
 // Edit folder cases
 test('Positive - edit a folder ', async ({ page }) => {
+    const folderName = `folder-${Math.random().toString(36).substring(2, 16)}`;
     const folder = new FolderPage(page);
     await folder.goto();
     await folder.create(folderName);
@@ -75,10 +79,11 @@ test('Positive - edit a folder ', async ({ page }) => {
 });
 
 test('Negative - edit a folder and leave its name empty ', async ({ page }) => {
+    const folderName = `folder-${Math.random().toString(36).substring(2, 16)}`;
     const folder = new FolderPage(page);
     await folder.goto();
     await folder.create(folderName);
-    await folder.errorExcpected(false, succesMessageToValidFolder)
+    await folder.errorExcpected(false, succesMessageToValidFolder);
 
     const newFolderName = ''
     await folder.editFolderByName(folderName, newFolderName);
